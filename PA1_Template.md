@@ -31,12 +31,12 @@ We start by calculating the number of steps per day. For that we use 'tapply'
 considering the date as a factor
 
 ```r
-day_mean <- tapply(data$steps, data$date, sum)
-day_mean_avg <- mean(day_mean, na.rm = TRUE)
-day_mean_mdn <- median(day_mean, na.rm = TRUE)
-hist(day_mean)
-abline(v = day_mean_avg, col = "blue", lwd = 2)
-abline(v = day_mean_mdn, col = "red", lwd = 2)
+day_steps <- tapply(data$steps, data$date, sum)
+day_steps_avg <- mean(day_steps, na.rm = TRUE)
+day_steps_mdn <- median(day_steps, na.rm = TRUE)
+hist(day_steps)
+abline(v = day_steps_avg, col = "blue", lwd = 2)
+abline(v = day_steps_mdn, col = "red", lwd = 2)
 ```
 
 ![plot of chunk mean_steps_day](figure/mean_steps_day-1.png) 
@@ -75,7 +75,7 @@ plot(dimnames(interval_mean)[[1]], interval_mean, type ="l", xlab = "5-minute in
 The interval with the highest average is 835 with 206.17 steps.
 
 ## Imputing missing values
-As missing the presence of missing values may introduce bias, let's review how
+As the presence of missing values may introduce bias, let's review how
 many of them are there in our dataset.
 
 ```r
@@ -83,6 +83,9 @@ many of them are there in our dataset.
 na_index <- is.na(data$steps)
 num_na <- sum(na_index)
 ```
+
+We propose to fill in missing values with the average number of steps measured in the interval accross
+all days measured.
 
 ```r
 # replace with mean value for the interval accross days
@@ -95,12 +98,12 @@ Let's create a histogram to check how removing NA's has affected the dataset.
 
 
 ```r
-fixed_day_mean <- tapply(fixed_data$steps, fixed_data$date, sum)
-fixed_day_mean_avg <- mean(fixed_day_mean, na.rm = TRUE)
-fixed_day_mean_mdn <- median(fixed_day_mean, na.rm = TRUE)
-hist(fixed_day_mean)
-abline(v = fixed_day_mean_avg, col = "blue", lwd = 2)
-abline(v = fixed_day_mean_mdn, col = "red", lwd = 2)
+fixed_day_steps <- tapply(fixed_data$steps, fixed_data$date, sum)
+fixed_day_steps_avg <- mean(fixed_day_steps, na.rm = TRUE)
+fixed_day_steps_mdn <- median(fixed_day_steps, na.rm = TRUE)
+hist(fixed_day_steps)
+abline(v = fixed_day_steps_avg, col = "blue", lwd = 2)
+abline(v = fixed_day_steps_mdn, col = "red", lwd = 2)
 ```
 
 ![plot of chunk fill_in report_changes_na](figure/fill_in report_changes_na-1.png) 

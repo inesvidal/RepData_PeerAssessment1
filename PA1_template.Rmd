@@ -1,25 +1,126 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+html_document:
+keep_md: true
 ---
-
-
+```{r setoptions, echo = FALSE} 
+# To make code readable
+library(knitr)
+opts_chunk$set(echo = TRUE, cache = TRUE)
+```
 ## Loading and preprocessing the data
-
-
+We start with setting the working directory and some initialisation.
+```{r initial_setup}
+zipfile = "./activity.zip"
+file = "./activity.csv"
+setwd("/Users/inesv/Coursera/5-Replicable/w2/RepData_PeerAssessment1")
+```
+We'll unzip if needed the activity file:
+```{r unzip_file}
+if(!file.exists("file")) {
+    unzip (zipfile, exdir = "./", junkpaths = TRUE)
+    }
+```
+Then we load the activity file:
+```{r load_data}
+data <-read.csv(file, header = TRUE, sep = ",", quote = "\"")
+```
 
 ## What is mean total number of steps taken per day?
+We start by calculating the number of steps per day. For that we use 'tapply' 
+considering the date as a factor
+```{r mean_steps_day, fig.height=4}
+day_steps <- tapply(data$steps, data$date, sum)
+day_steps_avg <- mean(day_steps, na.rm = TRUE)
+day_steps_mdn <- median(day_steps, na.rm = TRUE)
+hist(day_steps)
+abline(v = day_steps_avg, col = "blue", lwd = 2)
+abline(v = day_steps_mdn, col = "red", lwd = 2)
+```  
 
-
+Mean and median are so close (`r  sprintf("%.2f", day_steps_avg)` and `r  sprintf("%.2f", day_steps_mdn)`, respectively) that they overlap in the plot above.  
 
 ## What is the average daily activity pattern?
+We calculate the average number of steps taken per 5-minute interval (x-axis), 
+averaged across all days (y-axis).  
+Again, we use 'tapply' using the column 'interval' as a factor.
+```{r average_daily_pattern, fig.height=4}
+# convert interval to a factor
+data$interval <- factor(data$interval)
+str(data)
+# obtain the average per interval accross all days
+interval_mean <- tapply(data$steps, data$interval, function(x){mean(x, na.rm = TRUE)})
+plot(dimnames(interval_mean)[[1]], interval_mean, type ="l", xlab = "5-minute interval",
+     ylab = "Average number of steps")
+```  
 
+```{r inverval_highest_average, echo = FALSE}
+max <- max(interval_mean)
+max_interval <- names(which.max(interval_mean))
+```   
 
+The interval with the highest average is `r max_interval` with `r sprintf("%.2f", max)` steps.
 
 ## Imputing missing values
+As the presence of missing values may introduce bias, let's review how
+many of them are there in our dataset.
+```{r missing_values}
+# count missing values
+na_index <- is.na(data$steps)
+num_na <- sum(na_index)
+```
 
+We propose to fill in missing values with the average number of steps measured in the interval accross
+all days measured.
+```{r fill_in missing_values}
+# replace with mean value for the interval accross days
 
+fixed_data <- data
+fixed_data$steps[na_index] <- interval_mean[fixed_data$interval[na_index]]
+```
+
+Let's create a histogram to check how removing NA's has affected the dataset.
+
+```{r fill_in report_changes_na, fig.height=4}
+fixed_day_steps <- tapply(fixed_data$steps, fixed_data$date, sum)
+fixed_day_steps_avg <- mean(fixed_day_steps, na.rm = TRUE)
+fixed_day_steps_mdn <- median(fixed_day_steps, na.rm = TRUE)
+hist(fixed_day_steps)
+abline(v = fixed_day_steps_avg, col = "blue", lwd = 2)
+abline(v = fixed_day_steps_mdn, col = "red", lwd = 2)
+``` 
+
+The mean has not moved and is `r  sprintf("%.2f", day_steps_avg)` and the median has moved from `r  sprintf("%.2f", day_steps_mdn)` to `r  sprintf("%.2f", fixed_day_steps_mdn)`. Mean and median are so close that they overlap in the plot above.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Let's review how activity changes over the week.
+```{r factoring_weekdays_and_weekenddays}
+weekend_days <- c("Saturday", "Sunday")
+fixed_data$weekend <- factor(weekdays(as.Date(fixed_data$date)) %in% weekend_days,
+                             levels = c(TRUE, FALSE), 
+                             labels = c("weekend","weekdays"))
+
+steps <- aggregate(steps ~ weekend+interval, data = fixed_data, mean)
+library(ggplot2)
+w_end <- steps[steps$weekend == "weekend", ]
+w_days <- steps[steps$weekend == "weekdays", ]
+p <- par(mfrow = c(2, 1), 
+    mar = c(0, 0, 1, 1) + 0.1, 
+    oma = c(5, 4, 0, 0) + 0.1)
+
+# plot 1, weekend
+plot(x = w_end$interval, y = w_end$steps, type = "n", xaxt='n')
+lines (x = w_end$interval, y = w_end$steps)
+title(main="weekend")
+
+# plot 2, weekdays
+plot(x = w_days$interval, y = w_days$steps, type = "n")
+lines(x = w_days$interval, y = w_days$steps)
+title(main ="weekday")
+
+# axis are common
+title(xlab = "intervals",
+      ylab = "steps",
+      outer = TRUE, line = 3)
+```
